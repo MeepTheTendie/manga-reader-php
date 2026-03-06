@@ -1,0 +1,13 @@
+# Manga Reader - Apache Rewrite Rules
+RewriteEngine On
+
+# Allow direct access to existing files
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Allow direct access to existing directories
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Rewrite all other requests to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
