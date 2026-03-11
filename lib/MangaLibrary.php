@@ -13,10 +13,19 @@ class MangaLibrary {
      * Validate that path doesn't escape MANGA_ROOT (path traversal prevention)
      */
     public static function validatePath(string $mangaPath): ?string {
-        $fullPath = realpath(MANGA_ROOT . '/' . $mangaPath);
         $rootPath = realpath(MANGA_ROOT);
+        if ($rootPath === false) {
+            return null;
+        }
+        
+        $fullPath = realpath(MANGA_ROOT . '/' . $mangaPath);
         
         if ($fullPath === false || strpos($fullPath, $rootPath) !== 0) {
+            return null;
+        }
+        
+        // Ensure the path is within MANGA_ROOT (prevent traversal with trailing slash issues)
+        if (strlen($fullPath) < strlen($rootPath)) {
             return null;
         }
         
@@ -147,7 +156,7 @@ class MangaLibrary {
         
         foreach ($library as $seriesName => $seriesData) {
             foreach ($seriesData['volumes'] as $idx => $volume) {
-                $pathIndex[$volume['path']] = ['series' => $seriesData, 'index' => $idx];
+                $pathIndex[$volume['path']] = ['series' => &$library[$seriesName], 'index' => $idx];
             }
         }
         

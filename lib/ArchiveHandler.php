@@ -12,13 +12,9 @@ class ArchiveHandler {
      */
     public static function isImage(string $filename): bool {
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        // Handle extension with possible trailing characters
-        foreach (IMAGE_EXTS as $imgExt) {
-            if (stripos('.' . $ext, $imgExt) === 0) {
-                return true;
-            }
-        }
-        return false;
+        // Check if extension is in the allowed list
+        $allowedExts = array_map(fn($e) => ltrim($e, '.'), IMAGE_EXTS);
+        return in_array($ext, $allowedExts, true);
     }
 
     /**
@@ -244,6 +240,10 @@ class ArchiveHandler {
      */
     private static function extractFromRarCommandLine(string $archivePath, string $imagePath): ?string {
         $tempFile = tempnam(sys_get_temp_dir(), 'manga_');
+        if ($tempFile === false) {
+            throw new ArchiveException("Cannot create temporary file");
+        }
+        
         $command = 'unrar p -ierr ' . escapeshellarg($archivePath) . ' ' . escapeshellarg($imagePath) . ' > ' . escapeshellarg($tempFile) . ' 2>/dev/null';
         
         exec($command, $output, $returnVar);
@@ -255,6 +255,10 @@ class ArchiveHandler {
         
         $content = file_get_contents($tempFile);
         unlink($tempFile);
+        
+        if ($content === false) {
+            throw new ArchiveException("Failed to read extracted content");
+        }
         
         return $content;
     }

@@ -39,11 +39,11 @@ if ($path === '' || $path === 'index.php') {
     showReader(urldecode($matches[1]));
 } elseif ($path === 'api/library') {
     apiLibrary();
-} elseif (preg_match('/^api\/manga\/(.+)\/pages$/', $path, $matches)) {
+} elseif (preg_match('/^api\/manga\/(.+?)\/pages$/', $path, $matches)) {
     apiMangaPages(urldecode($matches[1]));
-} elseif (preg_match('/^api\/manga\/(.+)\/page\/(.+)$/', $path, $matches)) {
+} elseif (preg_match('/^api\/manga\/(.+?)\/page\/(.+)$/', $path, $matches)) {
     apiMangaPage(urldecode($matches[1]), urldecode($matches[2]));
-} elseif (preg_match('/^api\/manga\/(.+)\/cover$/', $path, $matches)) {
+} elseif (preg_match('/^api\/manga\/(.+?)\/cover$/', $path, $matches)) {
     apiMangaCover(urldecode($matches[1]));
 } elseif ($path === 'api/progress') {
     apiProgress();

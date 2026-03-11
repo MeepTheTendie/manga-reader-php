@@ -225,8 +225,9 @@
                         const coverUrl = `api/manga/${encodeURIComponent(volume.path)}/cover`;
                         const readUrl = `read/${encodeURIComponent(volume.path)}`;
                         const volProgress = progress[volume.path];
-                        const progressPercent = volProgress ? 
-                            Math.round((volProgress.page_index / 100) * 100) : 0; // Simplified
+                        // Progress percentage (default to 0 if unknown, will be updated when opened)
+                        const progressPercent = volProgress && volProgress.total_pages > 0 ? 
+                            Math.round((volProgress.page_index / volProgress.total_pages) * 100) : 0;
                         
                         html += `
                             <a href="${readUrl}" class="volume-card" title="${escapeHtml(volume.name)}">
