@@ -59,7 +59,7 @@ function showLibrary(): void {
 }
 
 function showReader(string $mangaPath): void {
-    $decodedPath = urldecode($mangaPath);
+    $decodedPath = $mangaPath;
     include __DIR__ . '/templates/reader.php';
 }
 
@@ -141,7 +141,7 @@ function apiMangaPage(string $mangaPath, string $pagePath): void {
     $contentType = $contentTypes[$ext] ?? 'image/jpeg';
     
     header('Content-Type: ' . $contentType);
-    header('Cache-Control: public, max-age=86400');
+    header('Cache-Control: private, max-age=86400');
     header('Content-Length: ' . strlen($imageData));
     
     echo $imageData;
@@ -167,7 +167,7 @@ function apiMangaCover(string $mangaPath): void {
     }
     
     header('Content-Type: image/jpeg');
-    header('Cache-Control: public, max-age=86400');
+    header('Cache-Control: private, max-age=86400');
     header('Content-Length: ' . strlen($thumbData));
     
     echo $thumbData;
@@ -177,9 +177,10 @@ function apiProgress(): void {
     header('Content-Type: application/json');
     
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        echo json_encode(ProgressTracker::loadProgress());
+        try { echo json_encode(ProgressTracker::loadProgress()); } catch (Throwable $error) { http_response_code(503); echo json_encode(['error'=>'Progress could not be read.']); }
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $input = file_get_contents('php://input');
+        $input = file_get_contents('php://input', false, null, 0, 65537);
+        if (strlen($input) > 65536) { http_response_code(413); echo json_encode(['error'=>'Request too large']); return; }
         $data = json_decode($input, true);
         
         if ($data === null) {
@@ -191,9 +192,16 @@ function apiProgress(): void {
         $mangaPath = $data['manga_path'] ?? null;
         $pageIndex = $data['page_index'] ?? null;
         
-        if ($mangaPath !== null && $pageIndex !== null) {
-            ProgressTracker::updateProgress($mangaPath, (int)$pageIndex);
-            echo json_encode(['status' => 'saved']);
+        if (is_string($mangaPath) && is_int($pageIndex) && $pageIndex >= 0 && MangaLibrary::validatePath($mangaPath) !== null) {
+            try {
+                $pages = ArchiveHandler::getArchiveFiles(MangaLibrary::validatePath($mangaPath));
+                if ($pageIndex >= count($pages)) { http_response_code(400); echo json_encode(['error'=>'Page out of range']); return; }
+                if (!ProgressTracker::updateProgress($mangaPath, $pageIndex)) throw new RuntimeException('Save failed');
+                echo json_encode(['status' => 'saved']);
+            } catch (Throwable $error) {
+                error_log('Manga progress save failed');
+                http_response_code(503); echo json_encode(['error'=>'Progress could not be saved. Please retry.']);
+            }
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid data']);

@@ -43,7 +43,8 @@ Environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MANGA_ROOT` | Path to manga directory | `~/Documents` |
-| `CACHE_DIR` | Path for thumbnail cache | `./cache` |
+| `CACHE_DIR` | Path for private thumbnails/progress | `./cache` |
+| `MANGA_PASSWORD_HASH` | Password hash required for remote hosting | unset |
 
 Example:
 ```bash
@@ -99,3 +100,11 @@ manga-reader-php/
 ## License
 
 MIT
+
+## Private hosting and reliable saves
+
+The PHP development server remains passwordless only for requests from localhost with a localhost Host header. Remote hosting requires `MANGA_PASSWORD_HASH` and HTTPS; the browser prompts for HTTP Basic authentication (the username is ignored). Generate the hash from a securely entered password, and configure it in the server environment. Never put a plaintext password in source or shell history. Use the supplied Apache rules, which deny direct access to cache, internal code, and configuration files. Other servers need equivalent private-path restrictions. This app currently expects to be mounted at `/`.
+
+Progress writes lock the full read/modify/write operation and replace the JSON file atomically. Corrupt files are preserved for recovery. The reader reports failed saves and offers a retry. Copy `CACHE_DIR/reading_progress.json` to a private backup location to back up progress; stop writes before restoring it.
+
+Run `python3 tests/regression.py` with PHP and ZIP support to check traversal boundaries, remote access, cross-site writes, invalid pages, failed saves and concurrent updates.

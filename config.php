@@ -3,6 +3,9 @@
  * Manga Reader - Configuration
  */
 
+require_once __DIR__ . '/lib/Access.php';
+protectManga();
+
 // Security headers
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
@@ -21,5 +24,5 @@ const ARCHIVE_EXTS = ['.cbz', '.zip', '.cbr', '.rar'];
 
 // Ensure cache directory exists
 if (!is_dir(CACHE_DIR)) {
-    mkdir(CACHE_DIR, 0755, true);
+    mkdir(CACHE_DIR, 0700, true);
 }

@@ -20,7 +20,7 @@ class MangaLibrary {
         
         $fullPath = realpath(MANGA_ROOT . '/' . $mangaPath);
         
-        if ($fullPath === false || strpos($fullPath, $rootPath) !== 0) {
+        if ($fullPath === false || ($fullPath !== $rootPath && !str_starts_with($fullPath, rtrim($rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR))) {
             return null;
         }
         

@@ -1,5 +1,9 @@
 # Manga Reader - Apache Rewrite Rules
+Options -Indexes
 RewriteEngine On
+RewriteRule ^(?:cache|lib|templates|tests|vendor)(?:/|$) - [F,L]
+RewriteRule ^(?:config\.php|.*\.(?:json|lock|log|sql|db)|\..*)$ - [F,L]
+
 
 # Allow direct access to existing files
 RewriteCond %{REQUEST_FILENAME} -f

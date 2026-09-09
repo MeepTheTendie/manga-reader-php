@@ -1,63 +1,42 @@
 <?php
-/**
- * Progress Tracker - Save and load reading progress
- */
 require_once __DIR__ . '/../config.php';
 
 class ProgressTracker {
-    
-    /**
-     * Load reading progress from file
-     */
     public static function loadProgress(): array {
-        if (!file_exists(PROGRESS_FILE)) {
-            return [];
-        }
-        
+        if (!file_exists(PROGRESS_FILE)) return [];
         $content = file_get_contents(PROGRESS_FILE);
-        if ($content === false) {
-            return [];
-        }
-        
+        if ($content === false) throw new RuntimeException('Cannot read progress');
         $data = json_decode($content, true);
-        if ($data === null) {
-            return [];
-        }
-        
+        if (!is_array($data)) throw new RuntimeException('Progress file is damaged; restore a backup before saving');
         return $data;
     }
-    
-    /**
-     * Save reading progress to file
-     */
+    private static function locked(callable $operation): bool {
+        $lock = fopen(PROGRESS_FILE . '.lock', 'c');
+        if (!$lock) return false;
+        try {
+            if (!flock($lock, LOCK_EX)) return false;
+            return $operation();
+        } finally { flock($lock, LOCK_UN); fclose($lock); }
+    }
+    private static function atomicWrite(array $progress): bool {
+        $content = json_encode($progress, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        $temp = tempnam(dirname(PROGRESS_FILE), '.progress-');
+        if ($temp === false) return false;
+        try {
+            if (file_put_contents($temp, $content) !== strlen($content)) return false;
+            chmod($temp, 0600);
+            return rename($temp, PROGRESS_FILE);
+        } finally { if (file_exists($temp)) unlink($temp); }
+    }
     public static function saveProgress(array $progress): bool {
-        $content = json_encode($progress, JSON_PRETTY_PRINT);
-        if ($content === false) {
-            return false;
-        }
-        
-        return file_put_contents(PROGRESS_FILE, $content) !== false;
+        return self::locked(fn() => self::atomicWrite($progress));
     }
-    
-    /**
-     * Update progress for a specific manga
-     */
     public static function updateProgress(string $mangaPath, int $pageIndex): bool {
-        $progress = self::loadProgress();
-        
-        $progress[$mangaPath] = [
-            'page_index' => $pageIndex,
-            'timestamp' => date('c'),
-        ];
-        
-        return self::saveProgress($progress);
+        return self::locked(function() use ($mangaPath, $pageIndex) {
+            $progress = self::loadProgress();
+            $progress[$mangaPath] = ['page_index'=>$pageIndex, 'timestamp'=>date('c')];
+            return self::atomicWrite($progress);
+        });
     }
-    
-    /**
-     * Get progress for a specific manga
-     */
-    public static function getProgress(string $mangaPath): ?array {
-        $progress = self::loadProgress();
-        return $progress[$mangaPath] ?? null;
-    }
+    public static function getProgress(string $mangaPath): ?array { return self::loadProgress()[$mangaPath] ?? null; }
 }

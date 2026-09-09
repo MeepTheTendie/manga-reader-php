@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading - Manga Reader</title>
@@ -229,11 +230,16 @@
     </a>
     
     <script>
-        const mangaPath = <?php echo json_encode($decodedPath); ?>;
+        const mangaPath = <?php echo json_encode($decodedPath, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         let pages = [];
         let currentPage = 0;
         let nextVolume = null;
         let saveTimeout = null;
+        let saveChain = Promise.resolve();
+        const saveStatus = document.createElement('p');
+        saveStatus.setAttribute('role','status');
+        saveStatus.style.cssText='position:fixed;bottom:0;left:0;background:#111;color:#fff;padding:6px;z-index:100';
+        document.body.append(saveStatus);
         
         async function loadManga() {
             const reader = document.getElementById('reader');
@@ -356,19 +362,26 @@
                 clearTimeout(saveTimeout);
             }
             
-            saveTimeout = setTimeout(async () => {
+            saveStatus.textContent = 'Progress: saving…';
+            saveTimeout = setTimeout(() => {
+                const pageToSave = currentPage;
+                saveChain = saveChain.then(async () => {
                 try {
-                    await fetch('api/progress', {
+                    const response = await fetch('api/progress', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             manga_path: mangaPath,
-                            page_index: currentPage
+                            page_index: pageToSave
                         })
                     });
+                    if (!response.ok) throw Error('Save failed');
+                    if (pageToSave === currentPage) saveStatus.textContent = 'Progress saved';
                 } catch (err) {
-                    // Silent fail
+                    saveStatus.textContent = 'Progress not saved — click here to retry';
+                    saveStatus.onclick = saveProgress;
                 }
+                });
             }, 500);
         }
         
